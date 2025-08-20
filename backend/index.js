@@ -1,3 +1,13 @@
+const express = require('express');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const http = require('http');
+const { Server } = require("socket.io");
+
+dotenv.config();
+
 const yargs = require('yargs');
 const { hideBin } = require('yargs/helpers');
 
@@ -6,11 +16,67 @@ const { addRepo } = require('./controllers/add');
 const { commitRepo } = require('./controllers/commit');
 const { pushRepo } = require('./controllers/push');
 const { pullRepo } = require('./controllers/pull');
-const { revertRepo } = require('./controllers/revert'); // Ensure revertRepo is imported
+const { revertRepo } = require('./controllers/revert');
 
+function startServer() {
+    const app = express();
+    const port = process.env.PORT || 3000;
+
+    app.use(bodyParser.json());
+    app.use(express.json());
+    app.use(cors({ origin: "*" }));
+
+    const mongoURI = process.env.MONGODB_URI;
+
+    mongoose.connect(mongoURI)
+        .then(() => {
+            console.log("MongoDB connected!");
+
+            const server = http.createServer(app);
+            
+            const io = new Server(server, {
+                cors: {
+                    origin: "*",
+                    methods: ["GET", "POST"]
+                }
+            });
+
+            io.on("connection", (socket) => {
+                socket.on("joinRoom", (userID) => {
+                    const user = userID;
+                    console.log("=====");
+                    console.log("user", user);
+                    console.log("=====");
+                    socket.join(userID);
+                });
+            });
+
+            const db = mongoose.connection;
+            db.once("open", async () => {
+                console.log("CRUD operations called");
+                // Any logic to run once DB is open can go here
+            });
+            
+            app.get("/", (req, res) => {
+                res.send("Welcome!");
+            });
+
+            server.listen(port, () => {
+                console.log(`Server is running on port ${port}`);
+            });
+
+        })
+        .catch((err) => {
+            console.error("Unable to connect to MongoDB:", err);
+        });
+}
+
+// Yargs CLI command configuration
 yargs(hideBin(process.argv))
-    .command("init", "Initialise a new repository", {}, initRepo)
-
+    .command("start", "Starts a new server", {}, startServer)
+    .command("init", "Initialise a new repository", {}, (argv) => {
+        return initRepo();
+    })
     .command("add <file>", "Add a file to the repository", (yargs) => {
         yargs.positional("file", {
             describe: "File to add to the staging area",
@@ -19,7 +85,6 @@ yargs(hideBin(process.argv))
     }, (argv) => {
         return addRepo(argv.file);
     })
-
     .command("commit <message>", "Commit the staged files", (yargs) => {
         yargs.positional("message", {
             describe: "Commit message",
@@ -28,18 +93,12 @@ yargs(hideBin(process.argv))
     }, (argv) => {
         return commitRepo(argv.message);
     })
-    
     .command("push", "Push commits to S3", {}, () => {
         return pushRepo();
     })
-
     .command("pull", "Pull commits from S3", {}, () => {
         return pullRepo();
     })
-
-    // ✅ The handler for the 'revert' command.
-    // This passes the commitID argument to the revertRepo function
-    // and returns the promise to ensure the program waits.
     .command("revert <commitID>", "Revert to a specific commit", (yargs) => {
         yargs.positional("commitID", {
             describe: "Commit ID to revert to",
@@ -48,7 +107,6 @@ yargs(hideBin(process.argv))
     }, (argv) => {
         return revertRepo(argv.commitID);
     })
-
     .demandCommand(1, "You need at least one command")
     .help()
     .argv;
