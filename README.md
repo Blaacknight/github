@@ -1,6 +1,6 @@
-Here’s a **complete `README.md`** you can copy-paste directly into your project:
 
-````markdown
+
+
 # Realtime Chat App
 
 A simple realtime chat application built with **Express**, **Mongoose**, **CORS**, **Body-Parser**, and **Socket.IO**.
