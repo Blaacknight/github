@@ -24,6 +24,7 @@ A simple realtime chat application built with **Express**, **Mongoose**, **CORS*
 
 ---
 
+```
 ## 📦 Installation
 
 1. Clone the repository:
