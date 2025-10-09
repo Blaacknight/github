@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const http = require('http');
 const { Server } = require("socket.io");
+const mainRouter=require("./routes/main.router");
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ const { pushRepo } = require('./controllers/push');
 const { pullRepo } = require('./controllers/pull');
 const { revertRepo } = require('./controllers/revert');
 
+// This function contains all the server setup and startup logic.
 function startServer() {
     const app = express();
     const port = process.env.PORT || 3000;
@@ -41,6 +43,8 @@ function startServer() {
                 }
             });
 
+            app.use("/", mainRouter);
+
             io.on("connection", (socket) => {
                 socket.on("joinRoom", (userID) => {
                     const user = userID;
@@ -54,13 +58,9 @@ function startServer() {
             const db = mongoose.connection;
             db.once("open", async () => {
                 console.log("CRUD operations called");
-                // Any logic to run once DB is open can go here
             });
             
-            app.get("/", (req, res) => {
-                res.send("Welcome!");
-            });
-
+            
             server.listen(port, () => {
                 console.log(`Server is running on port ${port}`);
             });
@@ -71,7 +71,7 @@ function startServer() {
         });
 }
 
-// Yargs CLI command configuration
+// Yargs is used to parse command-line arguments and run the correct function
 yargs(hideBin(process.argv))
     .command("start", "Starts a new server", {}, startServer)
     .command("init", "Initialise a new repository", {}, (argv) => {
