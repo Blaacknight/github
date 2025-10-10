@@ -10,9 +10,11 @@ const repositorySchema = new Schema({
     description: {
         type: String,
     },
-    content: {
+    content: [
+        {
         type: String,
-    },
+    }
+    ],
     visibility: {
         type: Boolean,
     },

@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const {MongoClient} = require("mongodb");
+const {MongoClient, ReturnDocument} = require("mongodb");
 const dotenv = require("dotenv");
 var ObjectId = require('mongodb').ObjectId;
 
@@ -122,12 +122,60 @@ async function getUserProfile (req, res){
     }
 };
 
-const updateUserProfile = (req, res) => {
-    res.send("Profile updated!");
+async function updateUserProfile(req, res) {
+  const currentID = req.params.id;
+  const { email, password } = req.body;
+
+  try {
+    await connectClient();
+    const db = client.db("apna-github-clone-db");
+    const userCollection = db.collection("users");
+
+    let updateFields = { email };
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      updateFields.password = hashedPassword;
+    }
+
+    const result = await userCollection.findOneAndUpdate(
+      { _id: new ObjectId(currentID) },
+      { $set: updateFields },
+      { returnDocument: "after" } // ✅ correct key
+    );
+
+    if (!result.value) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(result.value);
+  } catch (err) {
+    console.error("Error during fetching:", err.message);
+    res.status(500).send("Server error!");
+  }
 };
 
-const deleteUserProfile = (req, res) => {
-    res.send("Profile deleted!");
+async function deleteUserProfile(req, res) {
+  const currentID = req.params.id;
+
+  try {
+    await connectClient();
+    const db = client.db("apna-github-clone-db");
+    const userCollection = db.collection("users");
+
+    const result = await userCollection.deleteOne({
+      _id: new ObjectId(currentID),
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ message: "User profile deleted!" });
+  } catch (err) {
+    console.error("Error during fetching:", err.message);
+    res.status(500).send("Server error!");
+  }
 };
 
 module.exports = {

@@ -1,33 +1,26 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const userSchema = new Schema({
-    username: {
+const issueSchema = new Schema({
+    title: {
         type: String,
         required: true,
-        unique: true,
     },
-    email: {
+    description: {
         type: String,
         required: true,
-        unique: true,
     },
-    password: {
+    status: {
         type: String,
+        enum: ["open", "closed"],
+        default: "open",
     },
-    repositories: [{
+    repository: {
         type: Schema.Types.ObjectId,
         ref: "Repository",
-    }],
-    followedUsers: [{
-        type: Schema.Types.ObjectId,
-        ref: "User",
-    }],
-    starRepos: [{
-        type: Schema.Types.ObjectId,
-        ref: "Repository",
-    }],
+        required: true,
+    },
 }, { timestamps: true });
 
-const User = mongoose.model("User", userSchema);
-module.exports = User;
+const Issue = mongoose.model("Issue", issueSchema);
+module.exports = Issue;
